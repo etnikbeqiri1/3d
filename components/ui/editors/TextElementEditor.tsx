@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { TextElement } from '@/lib/store';
+import { TextElement, useKeychainStore } from '@/lib/store';
 import { FONTS } from '@/lib/fonts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,17 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TextElementEditorProps {
   textElement: TextElement;
   index: number;
   onUpdate: (updates: Partial<TextElement>) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
   canRemove: boolean;
+  otherTexts: TextElement[];
+  onCloneStyle: (sourceId: string) => void;
 }
 
 export function TextElementEditor({
@@ -23,7 +27,10 @@ export function TextElementEditor({
   index,
   onUpdate,
   onRemove,
+  onDuplicate,
   canRemove,
+  otherTexts,
+  onCloneStyle,
 }: TextElementEditorProps) {
   const [isOpen, setIsOpen] = useState(index === 0);
   const [fontSearch, setFontSearch] = useState('');
@@ -80,21 +87,52 @@ export function TextElementEditor({
                 <ChevronIcon isOpen={isOpen} />
               </button>
             </CollapsibleTrigger>
-            {canRemove && (
+            <div className="flex items-center mr-1">
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-9 mr-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={onRemove}
+                className="size-8"
+                onClick={onDuplicate}
+                title="Duplicate"
               >
-                <TrashIcon />
+                <CopyIcon />
               </Button>
-            )}
+              {canRemove && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={onRemove}
+                  title="Delete"
+                >
+                  <TrashIcon />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
         <CollapsibleContent>
           <CardContent className="space-y-4 pt-0">
+            {/* Clone style from another text */}
+            {otherTexts.length > 0 && (
+              <div className="space-y-2">
+                <Label>Clone Style From</Label>
+                <Select onValueChange={(id) => onCloneStyle(id)}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Select text to clone style..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {otherTexts.map((t, i) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.text || `Text ${i + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label>Text</Label>
@@ -309,6 +347,15 @@ function TrashIcon() {
   return (
     <svg className="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4M12.667 4v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z" />
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg className="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="5" width="9" height="9" rx="1" />
+      <path d="M2 11V3a1 1 0 011-1h8" />
     </svg>
   );
 }

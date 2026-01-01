@@ -136,6 +136,8 @@ interface KeychainState {
   addText: () => void;
   removeText: (id: string) => void;
   updateText: (id: string, updates: Partial<TextElement>) => void;
+  duplicateText: (id: string) => void;
+  cloneTextStyle: (sourceId: string, targetId: string) => void;
 
   // Multiple icons
   icons: IconElement[];
@@ -143,6 +145,10 @@ interface KeychainState {
   addCustomIcon: (svgContent: string, name?: string) => void;
   removeIcon: (id: string) => void;
   updateIcon: (id: string, updates: Partial<IconElement>) => void;
+
+  // Config export/import
+  exportConfig: () => string;
+  importConfig: (json: string) => boolean;
 }
 
 // Generate unique IDs
@@ -255,7 +261,7 @@ const createDefaultPlateText = (): TextElement => ({
   tiltY: 0,
 });
 
-export const useKeychainStore = create<KeychainState>((set) => ({
+export const useKeychainStore = create<KeychainState>((set, get) => ({
   // Mode default
   mode: 'keychain',
   setMode: (mode) =>
@@ -367,6 +373,38 @@ export const useKeychainStore = create<KeychainState>((set) => ({
     set((state) => ({
       texts: state.texts.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     })),
+  duplicateText: (id) =>
+    set((state) => {
+      const textToDuplicate = state.texts.find((t) => t.id === id);
+      if (!textToDuplicate) return state;
+      const newText: TextElement = {
+        ...textToDuplicate,
+        id: Math.random().toString(36).substr(2, 9),
+        offsetY: textToDuplicate.offsetY + 5, // Offset slightly
+      };
+      return { texts: [...state.texts, newText] };
+    }),
+  cloneTextStyle: (sourceId, targetId) =>
+    set((state) => {
+      const source = state.texts.find((t) => t.id === sourceId);
+      if (!source) return state;
+      return {
+        texts: state.texts.map((t) =>
+          t.id === targetId
+            ? {
+                ...t,
+                font: source.font,
+                fontSize: source.fontSize,
+                depth: source.depth,
+                color: source.color,
+                rotateZ: source.rotateZ,
+                tiltX: source.tiltX,
+                tiltY: source.tiltY,
+              }
+            : t
+        ),
+      };
+    }),
 
   // Icons - start empty
   icons: [],
@@ -402,6 +440,67 @@ export const useKeychainStore = create<KeychainState>((set) => ({
     set((state) => ({
       icons: state.icons.map((i) => (i.id === id ? { ...i, ...updates } : i)),
     })),
+
+  // Config export - returns JSON string of all settings
+  exportConfig: () => {
+    const state = get();
+    const config = {
+      version: 1,
+      mode: state.mode,
+      country: state.country,
+      showEUFlag: state.showEUFlag,
+      countryOffsetX: state.countryOffsetX,
+      countryOffsetY: state.countryOffsetY,
+      countryDepth: state.countryDepth,
+      euStarsDepth: state.euStarsDepth,
+      style: state.style,
+      width: state.width,
+      height: state.height,
+      thickness: state.thickness,
+      baseColor: state.baseColor,
+      frameStyle: state.frameStyle,
+      frameColor: state.frameColor,
+      frameWidth: state.frameWidth,
+      holePosition: state.holePosition,
+      holeRadius: state.holeRadius,
+      texts: state.texts,
+      icons: state.icons,
+    };
+    return JSON.stringify(config, null, 2);
+  },
+
+  // Config import - loads settings from JSON string
+  importConfig: (json) => {
+    try {
+      const config = JSON.parse(json);
+      if (!config.version) return false;
+
+      set({
+        mode: config.mode ?? 'keychain',
+        country: config.country ?? 'D',
+        showEUFlag: config.showEUFlag ?? true,
+        countryOffsetX: config.countryOffsetX ?? 0,
+        countryOffsetY: config.countryOffsetY ?? 0,
+        countryDepth: config.countryDepth ?? 0.8,
+        euStarsDepth: config.euStarsDepth ?? 0.3,
+        style: config.style ?? 'rounded',
+        width: config.width ?? 60,
+        height: config.height ?? 25,
+        thickness: config.thickness ?? 3,
+        baseColor: config.baseColor ?? '#3b82f6',
+        frameStyle: config.frameStyle ?? 'none',
+        frameColor: config.frameColor ?? '#ffffff',
+        frameWidth: config.frameWidth ?? 1.5,
+        holePosition: config.holePosition ?? 'left',
+        holeRadius: config.holeRadius ?? 2.5,
+        texts: config.texts ?? [],
+        icons: config.icons ?? [],
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
 }));
 
 // Preset icons list for UI

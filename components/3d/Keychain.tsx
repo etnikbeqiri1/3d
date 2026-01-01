@@ -219,7 +219,7 @@ export function Keychain({ onMeshReady }: KeychainProps) {
   // Calculate the Z position for elements
   // Elements should embed slightly INTO the base for proper 3D printing connection
   const baseTopZ = (thickness * SCALE) / 2;
-  const embedDepth = 0.03; // Embed elements 0.3mm into base for solid connection
+  const embedDepth = 0.05; // Embed elements 0.5mm into base for solid connection (prevents non-manifold edges)
 
   // Circular tab shape for license plate hole (when hole is on left)
   const tabShape = useMemo(() => {
@@ -274,34 +274,54 @@ export function Keychain({ onMeshReady }: KeychainProps) {
     const fw = frameWidthMm * SCALE;
     const frameDepth = 0.05;
 
-    // Helper to create a path at a given inset
+    // Base corner radius (used for rounded/badge styles)
+    const baseCornerRadius = style === 'badge'
+      ? Math.min(w, h) * 0.2
+      : Math.min(w, h) * 0.15;
+
+    // Helper to create a path at a given inset - maintains proper corner curvature
     const createFramePath = (inset: number): THREE.Shape => {
       const path = new THREE.Shape();
       const iw = w - inset * 2;
       const ih = h - inset * 2;
 
       if (style === 'circle') {
-        const r = Math.min(iw, ih) / 2;
+        // For circles, radius shrinks by inset amount
+        const r = Math.min(w, h) / 2 - inset;
+        if (r <= 0) return path;
         path.absarc(0, 0, r, 0, Math.PI * 2, false);
+        path.closePath();
       } else if (style === 'pill') {
+        // For pill, maintain the same proportional radius
         const r = ih / 2;
+        if (r <= 0 || iw <= 0) return path;
         path.moveTo(-iw / 2 + r, -ih / 2);
         path.lineTo(iw / 2 - r, -ih / 2);
         path.absarc(iw / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2, false);
         path.lineTo(-iw / 2 + r, ih / 2);
         path.absarc(-iw / 2 + r, 0, r, Math.PI / 2, -Math.PI / 2, false);
+        path.closePath();
       } else if (style === 'rounded' || style === 'badge') {
-        const r = Math.min(iw, ih) * 0.15;
-        path.moveTo(-iw / 2 + r, -ih / 2);
-        path.lineTo(iw / 2 - r, -ih / 2);
-        path.quadraticCurveTo(iw / 2, -ih / 2, iw / 2, -ih / 2 + r);
-        path.lineTo(iw / 2, ih / 2 - r);
-        path.quadraticCurveTo(iw / 2, ih / 2, iw / 2 - r, ih / 2);
-        path.lineTo(-iw / 2 + r, ih / 2);
-        path.quadraticCurveTo(-iw / 2, ih / 2, -iw / 2, ih / 2 - r);
-        path.lineTo(-iw / 2, -ih / 2 + r);
-        path.quadraticCurveTo(-iw / 2, -ih / 2, -iw / 2 + r, -ih / 2);
+        // FIXED: Use base corner radius minus inset to maintain curvature
+        const r = Math.max(0.01, baseCornerRadius - inset);
+        if (iw <= 0 || ih <= 0) return path;
+
+        // Clamp radius to fit within dimensions
+        const maxR = Math.min(iw / 2, ih / 2, r);
+
+        path.moveTo(-iw / 2 + maxR, -ih / 2);
+        path.lineTo(iw / 2 - maxR, -ih / 2);
+        path.quadraticCurveTo(iw / 2, -ih / 2, iw / 2, -ih / 2 + maxR);
+        path.lineTo(iw / 2, ih / 2 - maxR);
+        path.quadraticCurveTo(iw / 2, ih / 2, iw / 2 - maxR, ih / 2);
+        path.lineTo(-iw / 2 + maxR, ih / 2);
+        path.quadraticCurveTo(-iw / 2, ih / 2, -iw / 2, ih / 2 - maxR);
+        path.lineTo(-iw / 2, -ih / 2 + maxR);
+        path.quadraticCurveTo(-iw / 2, -ih / 2, -iw / 2 + maxR, -ih / 2);
+        path.closePath();
       } else {
+        // Rectangle
+        if (iw <= 0 || ih <= 0) return path;
         path.moveTo(-iw / 2, -ih / 2);
         path.lineTo(iw / 2, -ih / 2);
         path.lineTo(iw / 2, ih / 2);
@@ -314,21 +334,37 @@ export function Keychain({ onMeshReady }: KeychainProps) {
     const frames: { shape: THREE.Shape; depth: number; zOffset: number }[] = [];
 
     if (frameStyle === 'simple') {
-      const outer = createFramePath(fw * 0.5);
-      outer.holes.push(createFramePath(fw * 1.5) as THREE.Path);
-      frames.push({ shape: outer, depth: frameDepth, zOffset: 0 });
+      const outerInset = fw * 0.5;
+      const innerInset = fw * 1.5;
+      const outer = createFramePath(outerInset);
+      const inner = createFramePath(innerInset);
+      if (outer.curves.length > 0 && inner.curves.length > 0) {
+        outer.holes.push(inner as unknown as THREE.Path);
+        frames.push({ shape: outer, depth: frameDepth, zOffset: 0 });
+      }
     } else if (frameStyle === 'double') {
+      // First frame ring
       const outer1 = createFramePath(fw * 0.3);
-      outer1.holes.push(createFramePath(fw * 0.8) as THREE.Path);
-      frames.push({ shape: outer1, depth: frameDepth, zOffset: 0 });
+      const inner1 = createFramePath(fw * 0.8);
+      if (outer1.curves.length > 0 && inner1.curves.length > 0) {
+        outer1.holes.push(inner1 as unknown as THREE.Path);
+        frames.push({ shape: outer1, depth: frameDepth, zOffset: 0 });
+      }
 
+      // Second frame ring
       const outer2 = createFramePath(fw * 1.3);
-      outer2.holes.push(createFramePath(fw * 1.8) as THREE.Path);
-      frames.push({ shape: outer2, depth: frameDepth * 0.7, zOffset: 0 });
+      const inner2 = createFramePath(fw * 1.8);
+      if (outer2.curves.length > 0 && inner2.curves.length > 0) {
+        outer2.holes.push(inner2 as unknown as THREE.Path);
+        frames.push({ shape: outer2, depth: frameDepth * 0.7, zOffset: 0 });
+      }
     } else if (frameStyle === 'ridge') {
       const outer = createFramePath(fw * 0.3);
-      outer.holes.push(createFramePath(fw * 1.5) as THREE.Path);
-      frames.push({ shape: outer, depth: frameDepth * 1.2, zOffset: 0 });
+      const inner = createFramePath(fw * 1.5);
+      if (outer.curves.length > 0 && inner.curves.length > 0) {
+        outer.holes.push(inner as unknown as THREE.Path);
+        frames.push({ shape: outer, depth: frameDepth * 1.2, zOffset: 0 });
+      }
     }
 
     return frames;
@@ -342,10 +378,10 @@ export function Keychain({ onMeshReady }: KeychainProps) {
         <meshStandardMaterial color={baseColor} metalness={0.3} roughness={0.4} />
       </mesh>
 
-      {/* Frame elements */}
+      {/* Frame elements - embedded into base to avoid non-manifold edges */}
       {frameData && frameData.map((frame, idx) => (
-        <mesh key={`frame-${idx}`} position={[0, 0, baseTopZ + frame.zOffset]}>
-          <extrudeGeometry args={[frame.shape, { depth: frame.depth, bevelEnabled: false, curveSegments: 64 }]} />
+        <mesh key={`frame-${idx}`} position={[0, 0, baseTopZ - 0.02 + frame.zOffset]}>
+          <extrudeGeometry args={[frame.shape, { depth: frame.depth + 0.02, bevelEnabled: false, curveSegments: 64 }]} />
           <meshStandardMaterial
             color={frameColor}
             metalness={0.4}

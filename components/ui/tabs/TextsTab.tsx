@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { TextElementEditor } from '../editors/TextElementEditor';
 
 export function TextsTab() {
-  const { mode, texts, addText, removeText, updateText } = useKeychainStore();
+  const { mode, texts, addText, removeText, updateText, duplicateText, cloneTextStyle } = useKeychainStore();
 
   // License plate mode - simplified plate number editor
   if (mode === 'license_plate') {
@@ -125,7 +125,10 @@ export function TextsTab() {
               index={index}
               onUpdate={(updates) => updateText(textEl.id, updates)}
               onRemove={() => removeText(textEl.id)}
+              onDuplicate={() => duplicateText(textEl.id)}
               canRemove={texts.length > 1}
+              otherTexts={texts.filter((t) => t.id !== textEl.id)}
+              onCloneStyle={(sourceId) => cloneTextStyle(sourceId, textEl.id)}
             />
           ))}
         </div>

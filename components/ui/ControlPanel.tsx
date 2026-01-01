@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { useKeychainStore } from '@/lib/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,7 +17,42 @@ interface ControlPanelProps {
 }
 
 export function ControlPanel({ onExport, onExport3MF }: ControlPanelProps) {
-  const { mode, texts, icons } = useKeychainStore();
+  const { mode, texts, icons, exportConfig, importConfig } = useKeychainStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportConfig = () => {
+    const json = exportConfig();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'keychain-config.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const json = event.target?.result as string;
+      const success = importConfig(json);
+      if (!success) {
+        alert('Invalid config file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleCopyConfig = () => {
+    const json = exportConfig();
+    navigator.clipboard.writeText(json);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -71,6 +107,25 @@ export function ControlPanel({ onExport, onExport3MF }: ControlPanelProps) {
         <Button onClick={onExport3MF} variant="secondary" className="w-full" size="lg">
           Export 3MF (Multi-Color)
         </Button>
+        <Separator className="my-3" />
+        <div className="flex gap-2">
+          <Button onClick={handleExportConfig} variant="outline" size="sm" className="flex-1">
+            Save Config
+          </Button>
+          <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="sm" className="flex-1">
+            Load Config
+          </Button>
+          <Button onClick={handleCopyConfig} variant="outline" size="sm" className="flex-1">
+            Copy
+          </Button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportConfig}
+          className="hidden"
+        />
       </div>
     </div>
   );
