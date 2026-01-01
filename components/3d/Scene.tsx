@@ -1,11 +1,29 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows, PerspectiveCamera, Stars } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { Keychain } from './Keychain';
+
+// Camera logger component
+function CameraLogger() {
+  const { camera } = useThree();
+  const lastLog = useRef(0);
+
+  useFrame(() => {
+    const now = Date.now();
+    // Log every 500ms when camera moves
+    if (now - lastLog.current > 500) {
+      lastLog.current = now;
+      const pos = `x: ${camera.position.x.toFixed(2)}, y: ${camera.position.y.toFixed(2)}, z: ${camera.position.z.toFixed(2)}`;
+      console.log(`📷 Camera Position: [${pos}]`);
+    }
+  });
+
+  return null;
+}
 
 interface SceneProps {
   onMeshReady?: (mesh: THREE.Group) => void;
@@ -87,7 +105,7 @@ export function Scene({ onMeshReady }: SceneProps) {
       >
         <color attach="background" args={['#000000']} />
 
-        <PerspectiveCamera makeDefault position={[0, 0, 20]} fov={45} />
+        <PerspectiveCamera makeDefault position={[-2.1, 3.95, 4.68]} fov={45} />
 
         {/* Background effects - multiple star layers for size variation */}
         <Stars radius={100} depth={80} count={1000} factor={2} saturation={0} fade speed={0.3} />
@@ -132,6 +150,9 @@ export function Scene({ onMeshReady }: SceneProps) {
           autoRotate={false}
           makeDefault
         />
+
+        {/* Camera position logger - check browser console */}
+        <CameraLogger />
 
         <gridHelper args={[10, 10, '#1a1a2e', '#0f0f1a']} position={[0, -1.5, 0]} />
 
