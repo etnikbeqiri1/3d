@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { TextElement } from '@/lib/store';
 import { FONTS } from '@/lib/fonts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
@@ -27,7 +26,39 @@ export function TextElementEditor({
   canRemove,
 }: TextElementEditorProps) {
   const [isOpen, setIsOpen] = useState(index === 0);
+  const [fontSearch, setFontSearch] = useState('');
   const previewText = textElement.text || 'Empty';
+
+  // Filter fonts based on search
+  const filteredFonts = useMemo(() => {
+    if (!fontSearch.trim()) return FONTS;
+    const search = fontSearch.toLowerCase();
+    return FONTS.filter(f =>
+      f.displayName.toLowerCase().includes(search) ||
+      f.name.toLowerCase().includes(search)
+    );
+  }, [fontSearch]);
+
+  // Get current font index in filtered list
+  const currentFontIndex = useMemo(() => {
+    return filteredFonts.findIndex(f => f.name === textElement.font);
+  }, [filteredFonts, textElement.font]);
+
+  // Get current font display name
+  const currentFont = FONTS.find(f => f.name === textElement.font);
+
+  // Navigate to previous/next font
+  const goToPrevFont = () => {
+    if (filteredFonts.length === 0) return;
+    const newIndex = currentFontIndex <= 0 ? filteredFonts.length - 1 : currentFontIndex - 1;
+    onUpdate({ font: filteredFonts[newIndex].name });
+  };
+
+  const goToNextFont = () => {
+    if (filteredFonts.length === 0) return;
+    const newIndex = currentFontIndex >= filteredFonts.length - 1 ? 0 : currentFontIndex + 1;
+    onUpdate({ font: filteredFonts[newIndex].name });
+  };
 
   return (
     <Card>
@@ -79,21 +110,75 @@ export function TextElementEditor({
 
             <div className="space-y-2">
               <Label>Font</Label>
-              <Select
-                value={textElement.font}
-                onValueChange={(value) => onUpdate({ font: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FONTS.map((font) => (
-                    <SelectItem key={font.name} value={font.name}>
-                      {font.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Font search */}
+              <div className="relative">
+                <Input
+                  placeholder="Search 814 fonts..."
+                  value={fontSearch}
+                  onChange={(e) => setFontSearch(e.target.value)}
+                  className="h-8 text-sm"
+                />
+                {/* Search results dropdown */}
+                {fontSearch.trim() && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredFonts.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        No fonts found
+                      </div>
+                    ) : (
+                      filteredFonts.slice(0, 50).map((font) => (
+                        <button
+                          key={font.name}
+                          className={`w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors ${
+                            font.name === textElement.font ? 'bg-accent font-medium' : ''
+                          }`}
+                          onClick={() => {
+                            onUpdate({ font: font.name });
+                            setFontSearch('');
+                          }}
+                        >
+                          {font.displayName}
+                          <span className="text-xs text-muted-foreground ml-2">({font.category})</span>
+                        </button>
+                      ))
+                    )}
+                    {filteredFonts.length > 50 && (
+                      <div className="p-2 text-xs text-muted-foreground text-center border-t">
+                        +{filteredFonts.length - 50} more results...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {/* Font navigator */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={goToPrevFont}
+                  disabled={filteredFonts.length === 0}
+                >
+                  <ChevronLeftIcon />
+                </Button>
+                <div className="flex-1 text-center min-w-0">
+                  <div className="text-xs text-muted-foreground">
+                    {currentFontIndex >= 0 ? currentFontIndex + 1 : '-'}/{filteredFonts.length}
+                  </div>
+                  <div className="font-medium text-sm truncate" title={currentFont?.displayName}>
+                    {currentFont?.displayName || 'Unknown'}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={goToNextFont}
+                  disabled={filteredFonts.length === 0}
+                >
+                  <ChevronRightIcon />
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -232,6 +317,22 @@ function ChevronIcon({ isOpen }: { isOpen: boolean }) {
   return (
     <svg className={`size-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M4 6l4 4 4-4" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg className="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M10 4l-4 4 4 4" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg className="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M6 4l4 4-4 4" />
     </svg>
   );
 }
