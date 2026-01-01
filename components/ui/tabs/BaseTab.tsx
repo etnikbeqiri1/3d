@@ -1,6 +1,6 @@
 'use client';
 
-import { useKeychainStore, KeychainStyle, HolePosition, EU_COUNTRIES, EUCountryCode } from '@/lib/store';
+import { useKeychainStore, KeychainStyle, HolePosition, FrameStyle, EU_COUNTRIES, EUCountryCode } from '@/lib/store';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
@@ -8,12 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
-const SHAPES: { value: KeychainStyle; label: string }[] = [
-  { value: 'circle', label: 'Circle' },
-  { value: 'rectangle', label: 'Rectangle' },
-  { value: 'rounded', label: 'Rounded' },
-  { value: 'pill', label: 'Pill' },
-  { value: 'badge', label: 'Badge' },
+const SHAPES: { value: KeychainStyle; label: string; icon: string }[] = [
+  { value: 'rounded', label: 'Rounded', icon: '▢' },
+  { value: 'rectangle', label: 'Rectangle', icon: '▭' },
+  { value: 'circle', label: 'Circle', icon: '○' },
+  { value: 'pill', label: 'Pill', icon: '⬭' },
+  { value: 'badge', label: 'Badge', icon: '⬡' },
 ];
 
 const HOLE_POSITIONS: { value: HolePosition; label: string }[] = [
@@ -21,6 +21,13 @@ const HOLE_POSITIONS: { value: HolePosition; label: string }[] = [
   { value: 'top', label: 'Top' },
   { value: 'right', label: 'Right' },
   { value: 'none', label: 'None' },
+];
+
+const FRAME_STYLES: { value: FrameStyle; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'simple', label: 'Simple' },
+  { value: 'double', label: 'Double' },
+  { value: 'ridge', label: 'Ridge' },
 ];
 
 export function BaseTab() {
@@ -37,6 +44,9 @@ export function BaseTab() {
     height, setHeight,
     thickness, setThickness,
     baseColor, setBaseColor,
+    frameStyle, setFrameStyle,
+    frameColor, setFrameColor,
+    frameWidth, setFrameWidth,
     holePosition, setHolePosition,
     holeRadius, setHoleRadius,
   } = useKeychainStore();
@@ -46,27 +56,78 @@ export function BaseTab() {
       {mode === 'keychain' && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Shape</CardTitle>
+            <CardTitle className="text-sm font-medium">Shape & Frame</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={style}
-              onValueChange={(value) => value && setStyle(value as KeychainStyle)}
-              className="grid grid-cols-3 gap-1 w-full"
-            >
-              {SHAPES.map(({ value, label }) => (
-                <ToggleGroupItem
-                  key={value}
-                  value={value}
-                  variant="outline"
-                  className="text-xs"
-                >
-                  {label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Shape</Label>
+              <Select value={style} onValueChange={(value) => setStyle(value as KeychainStyle)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SHAPES.map(({ value, label, icon }) => (
+                    <SelectItem key={value} value={value}>
+                      <span className="flex items-center gap-2">
+                        <span className="text-lg">{icon}</span>
+                        <span>{label}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Frame</Label>
+              <Select value={frameStyle} onValueChange={(value) => setFrameStyle(value as FrameStyle)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FRAME_STYLES.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {frameStyle !== 'none' && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label>Frame Thickness</Label>
+                    <span className="text-sm text-muted-foreground">{frameWidth}mm</span>
+                  </div>
+                  <Slider
+                    value={[frameWidth]}
+                    onValueChange={([v]) => setFrameWidth(v)}
+                    min={0.5}
+                    max={4}
+                    step={0.25}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Frame Color</Label>
+                  <div className="flex gap-3 items-center">
+                    <Input
+                      type="color"
+                      value={frameColor}
+                      onChange={(e) => setFrameColor(e.target.value)}
+                      className="w-12 h-10 p-1"
+                    />
+                    <Input
+                      value={frameColor}
+                      onChange={(e) => setFrameColor(e.target.value)}
+                      className="flex-1 font-mono text-sm"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

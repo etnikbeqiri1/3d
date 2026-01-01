@@ -3,6 +3,7 @@ import { create } from 'zustand';
 export type GeneratorMode = 'keychain' | 'license_plate';
 export type KeychainStyle = 'rectangle' | 'rounded' | 'pill' | 'badge' | 'circle';
 export type HolePosition = 'left' | 'right' | 'top' | 'none';
+export type FrameStyle = 'none' | 'simple' | 'double' | 'ridge';
 
 // EU Countries for license plates (inEU = true means they use EU flag with stars)
 export const EU_COUNTRIES = [
@@ -112,11 +113,17 @@ interface KeychainState {
   height: number;
   thickness: number;
   baseColor: string;
+  frameStyle: FrameStyle;
+  frameColor: string;
+  frameWidth: number;
   setStyle: (style: KeychainStyle) => void;
   setWidth: (width: number) => void;
   setHeight: (height: number) => void;
   setThickness: (thickness: number) => void;
   setBaseColor: (color: string) => void;
+  setFrameStyle: (style: FrameStyle) => void;
+  setFrameColor: (color: string) => void;
+  setFrameWidth: (width: number) => void;
 
   // Hole
   holePosition: HolePosition;
@@ -309,6 +316,9 @@ export const useKeychainStore = create<KeychainState>((set) => ({
   height: 25,
   thickness: 3,
   baseColor: generateRandomBaseColor(),
+  frameStyle: 'none',
+  frameColor: '#ffffff',
+  frameWidth: 1.5,
   setStyle: (style) => set((state) => {
     // When switching to circle, make width and height equal
     if (style === 'circle') {
@@ -333,6 +343,9 @@ export const useKeychainStore = create<KeychainState>((set) => ({
   }),
   setThickness: (thickness) => set({ thickness }),
   setBaseColor: (baseColor) => set({ baseColor }),
+  setFrameStyle: (frameStyle) => set({ frameStyle }),
+  setFrameColor: (frameColor) => set({ frameColor }),
+  setFrameWidth: (frameWidth) => set({ frameWidth }),
 
   // Hole defaults
   holePosition: 'left',

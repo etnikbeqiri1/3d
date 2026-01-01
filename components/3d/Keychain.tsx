@@ -4,7 +4,7 @@ import { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Text3D, Center } from '@react-three/drei';
 import * as THREE from 'three';
-import { useKeychainStore, TextElement, IconElement, PresetIconType } from '@/lib/store';
+import { useKeychainStore, TextElement, IconElement, PresetIconType, FrameStyle } from '@/lib/store';
 import { getFontByName } from '@/lib/fonts';
 import { svgPathToShapes, getPresetIconPath, parseSVGContent } from '@/lib/svg-icons';
 
@@ -32,6 +32,9 @@ export function Keychain({ onMeshReady }: KeychainProps) {
     height,
     thickness,
     baseColor,
+    frameStyle,
+    frameColor,
+    frameWidth: frameWidthMm,
     holePosition,
     holeRadius,
     texts,
@@ -41,7 +44,7 @@ export function Keychain({ onMeshReady }: KeychainProps) {
   // Invalidate the canvas when any property changes
   useEffect(() => {
     invalidate();
-  }, [mode, country, showEUFlag, countryOffsetX, countryOffsetY, countryDepth, euStarsDepth, style, width, height, thickness, baseColor, holePosition, holeRadius, texts, icons, invalidate]);
+  }, [mode, country, showEUFlag, countryOffsetX, countryOffsetY, countryDepth, euStarsDepth, style, width, height, thickness, baseColor, frameStyle, frameColor, frameWidthMm, holePosition, holeRadius, texts, icons, invalidate]);
 
   // Create base plate shape
   const baseShape = useMemo(() => {
@@ -160,18 +163,29 @@ export function Keychain({ onMeshReady }: KeychainProps) {
       let holeX = 0;
       let holeY = 0;
 
+      // Calculate frame inset to prevent hole overlapping with frame
+      let frameInset = 0;
+      if (frameStyle !== 'none') {
+        const fw = frameWidthMm * SCALE;
+        if (frameStyle === 'simple') frameInset = fw * 1.5;
+        else if (frameStyle === 'double') frameInset = fw * 2.5;
+        else if (frameStyle === 'ridge') frameInset = fw * 2;
+      }
+
+      const baseInset = 0.1 + frameInset;
+
       switch (holePosition) {
         case 'left':
-          holeX = -w / 2 + hr + 0.1;
+          holeX = -w / 2 + hr + baseInset;
           holeY = 0;
           break;
         case 'right':
-          holeX = w / 2 - hr - 0.1;
+          holeX = w / 2 - hr - baseInset;
           holeY = 0;
           break;
         case 'top':
           holeX = 0;
-          holeY = h / 2 - hr - 0.1;
+          holeY = h / 2 - hr - baseInset;
           break;
       }
 
@@ -180,7 +194,7 @@ export function Keychain({ onMeshReady }: KeychainProps) {
     }
 
     return shape;
-  }, [mode, width, height, style, holePosition, holeRadius]);
+  }, [mode, width, height, style, holePosition, holeRadius, frameStyle, frameWidthMm]);
 
   // Extrusion settings
   const extrudeSettings = useMemo(
@@ -251,6 +265,75 @@ export function Keychain({ onMeshReady }: KeychainProps) {
     return stripe;
   }, [mode, width, height]);
 
+  // Frame shape for keychain mode
+  const frameData = useMemo(() => {
+    if (mode !== 'keychain' || frameStyle === 'none') return null;
+
+    const w = width * SCALE;
+    const h = height * SCALE;
+    const fw = frameWidthMm * SCALE;
+    const frameDepth = 0.05;
+
+    // Helper to create a path at a given inset
+    const createFramePath = (inset: number): THREE.Shape => {
+      const path = new THREE.Shape();
+      const iw = w - inset * 2;
+      const ih = h - inset * 2;
+
+      if (style === 'circle') {
+        const r = Math.min(iw, ih) / 2;
+        path.absarc(0, 0, r, 0, Math.PI * 2, false);
+      } else if (style === 'pill') {
+        const r = ih / 2;
+        path.moveTo(-iw / 2 + r, -ih / 2);
+        path.lineTo(iw / 2 - r, -ih / 2);
+        path.absarc(iw / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2, false);
+        path.lineTo(-iw / 2 + r, ih / 2);
+        path.absarc(-iw / 2 + r, 0, r, Math.PI / 2, -Math.PI / 2, false);
+      } else if (style === 'rounded' || style === 'badge') {
+        const r = Math.min(iw, ih) * 0.15;
+        path.moveTo(-iw / 2 + r, -ih / 2);
+        path.lineTo(iw / 2 - r, -ih / 2);
+        path.quadraticCurveTo(iw / 2, -ih / 2, iw / 2, -ih / 2 + r);
+        path.lineTo(iw / 2, ih / 2 - r);
+        path.quadraticCurveTo(iw / 2, ih / 2, iw / 2 - r, ih / 2);
+        path.lineTo(-iw / 2 + r, ih / 2);
+        path.quadraticCurveTo(-iw / 2, ih / 2, -iw / 2, ih / 2 - r);
+        path.lineTo(-iw / 2, -ih / 2 + r);
+        path.quadraticCurveTo(-iw / 2, -ih / 2, -iw / 2 + r, -ih / 2);
+      } else {
+        path.moveTo(-iw / 2, -ih / 2);
+        path.lineTo(iw / 2, -ih / 2);
+        path.lineTo(iw / 2, ih / 2);
+        path.lineTo(-iw / 2, ih / 2);
+        path.closePath();
+      }
+      return path;
+    };
+
+    const frames: { shape: THREE.Shape; depth: number; zOffset: number }[] = [];
+
+    if (frameStyle === 'simple') {
+      const outer = createFramePath(fw * 0.5);
+      outer.holes.push(createFramePath(fw * 1.5) as THREE.Path);
+      frames.push({ shape: outer, depth: frameDepth, zOffset: 0 });
+    } else if (frameStyle === 'double') {
+      const outer1 = createFramePath(fw * 0.3);
+      outer1.holes.push(createFramePath(fw * 0.8) as THREE.Path);
+      frames.push({ shape: outer1, depth: frameDepth, zOffset: 0 });
+
+      const outer2 = createFramePath(fw * 1.3);
+      outer2.holes.push(createFramePath(fw * 1.8) as THREE.Path);
+      frames.push({ shape: outer2, depth: frameDepth * 0.7, zOffset: 0 });
+    } else if (frameStyle === 'ridge') {
+      const outer = createFramePath(fw * 0.3);
+      outer.holes.push(createFramePath(fw * 1.5) as THREE.Path);
+      frames.push({ shape: outer, depth: frameDepth * 1.2, zOffset: 0 });
+    }
+
+    return frames;
+  }, [mode, frameStyle, style, width, height, frameWidthMm]);
+
   return (
     <group ref={groupRef}>
       {/* Base plate */}
@@ -258,6 +341,18 @@ export function Keychain({ onMeshReady }: KeychainProps) {
         <extrudeGeometry args={[baseShape, extrudeSettings]} />
         <meshStandardMaterial color={baseColor} metalness={0.3} roughness={0.4} />
       </mesh>
+
+      {/* Frame elements */}
+      {frameData && frameData.map((frame, idx) => (
+        <mesh key={`frame-${idx}`} position={[0, 0, baseTopZ + frame.zOffset]}>
+          <extrudeGeometry args={[frame.shape, { depth: frame.depth, bevelEnabled: false, curveSegments: 64 }]} />
+          <meshStandardMaterial
+            color={frameColor}
+            metalness={0.4}
+            roughness={0.3}
+          />
+        </mesh>
+      ))}
 
       {/* Circular tab for hole (license plate with left hole) */}
       {tabShape && (

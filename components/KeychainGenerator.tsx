@@ -7,7 +7,7 @@ import { ControlPanel } from './ui/ControlPanel';
 import { exportToSTL } from '@/lib/exportSTL';
 import { exportTo3MF } from '@/lib/export3MF';
 import { useKeychainStore, GeneratorMode } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const Scene = dynamic(() => import('./3d/Scene'), {
@@ -57,27 +57,20 @@ export function KeychainGenerator() {
         <Scene onMeshReady={handleMeshReady} />
       </Card>
       <div className="w-96 shrink-0 flex flex-col gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Mode</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={mode}
-              onValueChange={(value) => value && setMode(value as GeneratorMode)}
-              className="flex w-full"
-            >
-              <ToggleGroupItem value="keychain" variant="outline" className="flex-1">
-                Keychain
-              </ToggleGroupItem>
-              <ToggleGroupItem value="license_plate" variant="outline" className="flex-1">
-                License Plate
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </CardContent>
-        </Card>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={mode}
+          onValueChange={(value) => value && setMode(value as GeneratorMode)}
+          className="flex w-full"
+        >
+          <ToggleGroupItem value="keychain" variant="outline" className="flex-1 h-9">
+            Keychain
+          </ToggleGroupItem>
+          <ToggleGroupItem value="license_plate" variant="outline" className="flex-1 h-9">
+            License Plate
+          </ToggleGroupItem>
+        </ToggleGroup>
         <Card className="flex-1 min-h-0 overflow-hidden">
           <ControlPanel onExport={handleExport} onExport3MF={handleExport3MF} />
         </Card>

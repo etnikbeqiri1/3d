@@ -1,0 +1,7 @@
+services:
+  keychain-generator:
+    build: .
+    container_name: keychain-generator
+    ports:
+      - "9430:9430"
+    restart: unless-stopped
