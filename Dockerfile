@@ -3,6 +3,10 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Build argument for base URL
+ARG NEXT_PUBLIC_BASE_URL=https://9x.al
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 
