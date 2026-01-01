@@ -1,11 +1,12 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, ContactShadows, PerspectiveCamera, Stars } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { Keychain } from './Keychain';
+import { useKeychainStore } from '@/lib/store';
 
 interface SceneProps {
   onMeshReady?: (mesh: THREE.Group) => void;
@@ -18,6 +19,29 @@ function LoadingFallback() {
       <meshStandardMaterial color="#cccccc" />
     </mesh>
   );
+}
+
+// Camera controller that adjusts position based on mode
+function CameraController() {
+  const { camera, invalidate } = useThree();
+  const mode = useKeychainStore((state) => state.mode);
+  const prevMode = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Run on initial load and when mode changes
+    if (prevMode.current !== mode) {
+      const targetPos = mode === 'license_plate'
+        ? new THREE.Vector3(-3, 5, 8) // Backed off for license plate
+        : new THREE.Vector3(-2.1, 3.95, 4.68); // Default for keychain
+
+      camera.position.copy(targetPos);
+      camera.updateProjectionMatrix();
+      invalidate();
+      prevMode.current = mode;
+    }
+  }, [mode, camera, invalidate]);
+
+  return null;
 }
 
 export function Scene({ onMeshReady }: SceneProps) {
@@ -88,6 +112,7 @@ export function Scene({ onMeshReady }: SceneProps) {
         <color attach="background" args={['#000000']} />
 
         <PerspectiveCamera makeDefault position={[-2.1, 3.95, 4.68]} fov={45} />
+        <CameraController />
 
         {/* Background effects - multiple star layers for size variation */}
         <Stars radius={100} depth={80} count={1000} factor={2} saturation={0} fade speed={0.3} />

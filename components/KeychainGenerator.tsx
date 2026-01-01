@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import * as THREE from 'three';
 import { ControlPanel } from './ui/ControlPanel';
@@ -22,9 +22,20 @@ const Scene = dynamic(() => import('./3d/Scene'), {
   ),
 });
 
-export function KeychainGenerator() {
+interface KeychainGeneratorProps {
+  initialMode?: GeneratorMode;
+}
+
+export function KeychainGenerator({ initialMode }: KeychainGeneratorProps) {
   const meshRef = useRef<THREE.Group | null>(null);
   const { texts, mode, setMode } = useKeychainStore();
+
+  // Set initial mode from route
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode);
+    }
+  }, [initialMode, setMode]);
 
   const handleMeshReady = useCallback((mesh: THREE.Group) => {
     meshRef.current = mesh;
