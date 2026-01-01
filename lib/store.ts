@@ -141,6 +141,58 @@ interface KeychainState {
 // Generate unique IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+// Big list of popular names for random selection
+const POPULAR_NAMES = [
+  // Male names
+  'Liam', 'Noah', 'Oliver', 'James', 'Elijah', 'William', 'Henry', 'Lucas',
+  'Benjamin', 'Theodore', 'Jack', 'Levi', 'Alexander', 'Mason', 'Ethan',
+  'Jacob', 'Michael', 'Daniel', 'Logan', 'Sebastian', 'Matthew', 'Samuel',
+  'David', 'Joseph', 'Carter', 'Owen', 'Wyatt', 'John', 'Luke', 'Dylan',
+  'Gabriel', 'Anthony', 'Isaac', 'Grayson', 'Julian', 'Leo', 'Jayden',
+  'Ezra', 'Hudson', 'Thomas', 'Charles', 'Christopher', 'Jaxon', 'Maverick',
+  'Joshua', 'Andrew', 'Lincoln', 'Mateo', 'Ryan', 'Nathan', 'Aaron', 'Caleb',
+  'Hunter', 'Eli', 'Connor', 'Landon', 'Adrian', 'Asher', 'Cameron',
+  'Jeremiah', 'Robert', 'Nolan', 'Nicholas', 'Easton', 'Colton', 'Jordan',
+  'Dominic', 'Austin', 'Ian', 'Adam', 'Elias', 'Carson', 'Evan', 'Cooper',
+  'Xavier', 'Parker', 'Roman', 'Jason', 'Santiago', 'Chase', 'Sawyer',
+  'Leonardo', 'Axel', 'Tyler', 'Micah', 'Miles', 'Wesley', 'Harrison',
+  'Cole', 'Declan', 'Silas', 'Tristan', 'Ryder', 'Bennett', 'George', 'Max',
+  'Diego', 'Luca', 'Maxwell', 'Kai', 'Jude', 'Beau', 'Elliott', 'Finn',
+  // Female names
+  'Olivia', 'Emma', 'Charlotte', 'Amelia', 'Sophia', 'Mia', 'Isabella',
+  'Ava', 'Evelyn', 'Luna', 'Harper', 'Sofia', 'Camila', 'Eleanor', 'Emily',
+  'Gianna', 'Elizabeth', 'Mila', 'Ella', 'Avery', 'Scarlett', 'Penelope',
+  'Aria', 'Chloe', 'Layla', 'Abigail', 'Riley', 'Zoey', 'Nora', 'Lily',
+  'Hannah', 'Hazel', 'Aurora', 'Violet', 'Stella', 'Nova', 'Ellie', 'Isla',
+  'Willow', 'Ivy', 'Emilia', 'Zoe', 'Claire', 'Audrey', 'Lucy', 'Paisley',
+  'Skylar', 'Bella', 'Aaliyah', 'Savannah', 'Anna', 'Delilah', 'Eliana',
+  'Valentina', 'Maya', 'Sophie', 'Madelyn', 'Alice', 'Elena', 'Natalie',
+  'Naomi', 'Ruby', 'Eva', 'Sadie', 'Quinn', 'Hailey', 'Maria', 'Leilani',
+  'Kinsley', 'Ariana', 'Allison', 'Gabriella', 'Jade', 'Piper', 'Kennedy',
+  'Athena', 'Grace', 'Sarah', 'Cora', 'Madeline', 'Lydia', 'Aubrey',
+  'Autumn', 'Serenity', 'Melody', 'Genesis', 'Rose', 'Julia', 'Samantha',
+  'Clara', 'Raelynn', 'Alexa', 'Adeline', 'Reagan', 'Daisy',
+];
+
+// Generate random name from the list
+const generateRandomName = () => {
+  return POPULAR_NAMES[Math.floor(Math.random() * POPULAR_NAMES.length)];
+};
+
+// Nice colors for keychain bases
+const BASE_COLORS = [
+  '#4a90d9', '#e74c3c', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c',
+  '#e91e63', '#00bcd4', '#ff5722', '#673ab7', '#3f51b5', '#009688',
+  '#8bc34a', '#ff9800', '#795548', '#607d8b', '#f44336', '#2196f3',
+  '#4caf50', '#ffeb3b', '#ff4081', '#7c4dff', '#00e676', '#ff6d00',
+  '#d500f9', '#00b8d4', '#64dd17', '#ffab00', '#ff1744', '#651fff',
+];
+
+// Generate random base color
+const generateRandomBaseColor = () => {
+  return BASE_COLORS[Math.floor(Math.random() * BASE_COLORS.length)];
+};
+
 // Generate random color for custom icons
 const generateRandomColor = () => {
   const colors = [
@@ -152,10 +204,10 @@ const generateRandomColor = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-// Default text element
+// Default text element with random name
 const createDefaultText = (): TextElement => ({
   id: generateId(),
-  text: 'HELLO',
+  text: generateRandomName().toUpperCase(),
   font: 'helvetiker',
   fontSize: 8,
   depth: 1.5,
@@ -226,7 +278,7 @@ export const useKeychainStore = create<KeychainState>((set) => ({
         style: 'rounded' as KeychainStyle,
         width: 60,
         height: 25,
-        baseColor: '#4a90d9',
+        baseColor: generateRandomBaseColor(),
         texts: [createDefaultText()],
       };
     }),
@@ -251,12 +303,12 @@ export const useKeychainStore = create<KeychainState>((set) => ({
   setCountryDepth: (countryDepth) => set({ countryDepth }),
   setEUStarsDepth: (euStarsDepth) => set({ euStarsDepth }),
 
-  // Base plate defaults
+  // Base plate defaults - random color on first load
   style: 'rounded',
   width: 60,
   height: 25,
   thickness: 3,
-  baseColor: '#4a90d9',
+  baseColor: generateRandomBaseColor(),
   setStyle: (style) => set((state) => {
     // When switching to circle, make width and height equal
     if (style === 'circle') {
